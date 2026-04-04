@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDb from './utils/connectDb.js';
-import validateEnv from './config/validateEnv.js';
+
 import authRouter from './routes/auth.route.js';
 import notesRouter from "./routes/genrate.route.js"
 import cookieParser from 'cookie-parser';
@@ -12,8 +12,6 @@ import creditRouter from './routes/credits.route.js';
 import { stripeWebhook } from './controllers/credits.controller.js';
 dotenv.config();
 
-// Validate environment variables before starting
-validateEnv();
 
 const app = express();
 
