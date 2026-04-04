@@ -5,6 +5,8 @@ import Auth from './Pages/Auth'
 import Notes from './Pages/Notes'
 import Pricing from './Pages/Pricing'
 import History from './Pages/History'
+import PaymentSuccess from './Pages/PaymentSuccess'
+import PaymentFailed from './Pages/PaymentFailed'
 import { useEffect } from 'react';
 import { getCurrentUser } from './services/api';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,7 +28,12 @@ const App = () => {
          <Route path='/history' element={userData? <History/> : <Navigate to="/auth" replace/>}/>
         <Route path='/notes' element={userData? <Notes/> : <Navigate to="/auth" replace/>}/>
       <Route path='/pricing' element={userData? <Pricing/> : <Navigate to="/auth" replace/>}/>
+
+            <Route path='/payment-success' element={<PaymentSuccess/>}/>
+      <Route path='/payment-failed' element={<PaymentFailed/>}/>
       </Routes>
+
+
     </>
   )
 }

@@ -1,6 +1,5 @@
 import React from 'react'
 import { motion } from "motion/react"
-// import logo from "../assets/logo.png"
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import axios from 'axios'

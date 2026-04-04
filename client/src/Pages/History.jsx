@@ -14,14 +14,14 @@ function History() {
   const credits = userData.credits
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const [activeNoteId, setActiveNoteId] = useState(null);
-
   const [selectedNote, setSelectedNote] = useState(null);
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const myNotes = async () => {
       try {
         const res = await axios.get(serverUrl + "/api/notes/getnotes", { withCredentials: true })
-        console.log(res.data)
+        // console.log(res.data)
         setTopics(Array.isArray(res.data) ? res.data : [])
 
       } catch (error) {
@@ -31,7 +31,7 @@ const [activeNoteId, setActiveNoteId] = useState(null);
     myNotes()
   }, [])
 
-  const openNotes = async (noteId) => {
+const openNotes = async (noteId) => {
     setLoading(true)
     setActiveNoteId(noteId)
 try {
