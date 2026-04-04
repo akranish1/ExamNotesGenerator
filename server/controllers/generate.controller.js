@@ -13,22 +13,29 @@ export const generateNotes = async (req, res) => {
             includeDiagram = false,
             includeChart = false
         } = req.body;
-        if (!topic) {
-            return res.status(400).json({ message: "Topic is required" })
-        }
-        const user = await UserModel.findById(req.userId)
-        if (!user) {
-            return res.status(400).json({ message: "user is not found" })
+
+        // Validate input
+        if (!topic || topic.trim() === "") {
+            return res.status(400).json({ message: "Topic is required" });
         }
 
+        const user = await UserModel.findById(req.userId);
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+
+        // Check credits
         if (user.credits < 10) {
-            user.isCreditAvailable = false
-            await user.save()
+            user.isCreditAvailable = false;
+            await user.save();
             return res.status(403).json({
-                message: "Insufficient credits"
+                message: "Insufficient credits. Please purchase more credits.",
+                creditsRequired: 10,
+                creditsAvailable: user.credits
             });
         }
 
+        // Build prompt and generate response
         const prompt = buildPrompt({
             topic,
             classLevel,
@@ -36,12 +43,15 @@ export const generateNotes = async (req, res) => {
             revisionMode,
             includeDiagram,
             includeChart
-        })
+        });
 
+        const aiResponse = await generateGeminiResponse(prompt);
 
-        const aiResponse = await generateGeminiResponse(prompt)
-   
+        if (!aiResponse) {
+            return res.status(500).json({ message: "Failed to generate notes from AI" });
+        }
 
+        // Save notes to database
         const notes = await Notes.create({
             user: user._id,
             topic,
@@ -51,11 +61,9 @@ export const generateNotes = async (req, res) => {
             includeDiagram,
             includeChart,
             content: aiResponse
+        });
 
-
-        })
-
-
+        // Update user credits and notes
         user.credits -= 10;
         if (user.credits <= 0) user.isCreditAvailable = false;
 
@@ -64,24 +72,21 @@ export const generateNotes = async (req, res) => {
         }
 
         user.notes.push(notes._id);
-
         await user.save();
 
         return res.status(200).json({
             data: aiResponse,
-      noteId: notes._id,
-      creditsLeft: user.credits
-        })
-
-
-
+            noteId: notes._id,
+            creditsLeft: user.credits
+        });
 
     } catch (error) {
-        console.error(error);
-    res.status(500).json({
-      error: "AI generation failed",
-      message: error.message
-    });
-
+        console.error("Generate Notes Error:", error);
+        res.status(500).json({
+            error: "AI generation failed",
+            message: process.env.NODE_ENV === "development" 
+                ? error.message 
+                : "Failed to generate notes. Please try again."
+        });
     }
 }

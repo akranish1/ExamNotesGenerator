@@ -62,41 +62,55 @@ export const createCreditsOrder = async (req,res) => {
 }
 
 
-export const stripeWebhook = async (req,res) => {
-    const sig = req.headers["stripe-signature"]
+export const stripeWebhook = async (req, res) => {
+    const sig = req.headers["stripe-signature"];
     let event;
+    
     try {
-      if (process.env.PAYMENT_ENABLED !== "true") {
-  console.log("🚫 Payment disabled, ignoring webhook");
-  return res.json({ received: true });
-}
+        if (!process.env.STRIPE_WEBHOOK_SECRET) {
+            throw new Error("STRIPE_WEBHOOK_SECRET is not defined");
+        }
+
+        if (process.env.PAYMENT_ENABLED !== "true") {
+            console.log("🚫 Payment disabled, ignoring webhook");
+            return res.json({ received: true });
+        }
+
         event = stripe.webhooks.constructEvent(
             req.body,
             sig,
             process.env.STRIPE_WEBHOOK_SECRET
-        )   
+        );
     } catch (error) {
-         console.log("❌ Webhook signature error:", error.message);
-    return res.status(400).send("Webhook Error");
+        console.log("❌ Webhook signature error:", error.message);
+        return res.status(400).send("Webhook Error");
     }
 
-  if(event.type === "checkout.session.completed"){
-    const session = event.data.object;
+    try {
+        if (event.type === "checkout.session.completed") {
+            const session = event.data.object;
+            const userId = session.metadata.userId;
+            const creditsToAdd = Number(session.metadata.credits);
 
-    const userId = session.metadata.userId;
-    const creditsToAdd = Number(session.metadata.credits);
+            if (!userId || !creditsToAdd) {
+                console.error("Invalid webhook metadata:", { userId, creditsToAdd });
+                return res.status(400).json({ message: "Invalid metadata" });
+            }
 
-    if (!userId || !creditsToAdd) {
-    return res.status(400).json({ message: "Invalid metadata" });
-  }
+            const user = await UserModel.findByIdAndUpdate(userId, {
+                $inc: { credits: creditsToAdd },
+                $set: { isCreditAvailable: true },
+            }, { new: true });
 
-  const user = await UserModel.findByIdAndUpdate(userId , {
-    //we not adding , we are increasing
-    $inc: { credits: creditsToAdd },
-      $set: { isCreditAvailable: true },
-  },{new:true})
-
-  }
+            console.log(`✅ Credits added for user ${userId}: +${creditsToAdd}`);
+        }
+        
+        res.json({ received: true });
+    } catch (error) {
+        console.error("❌ Error processing webhook event:", error.message);
+        res.status(500).json({ message: "Error processing webhook" });
+    }
+}
 
    res.json({ received: true });
 }
